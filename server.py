@@ -1,7 +1,8 @@
 #  coding: utf-8 
 import SocketServer
+import os
 
-# Copyright 2013 Abram Hindle, Eddie Antonio Santos
+# Copyright 2013 Abram Hindle, Eddie Antonio Santos, Xuping Fang
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,10 +30,64 @@ import SocketServer
 
 class MyWebServer(SocketServer.BaseRequestHandler):
     
+    fileName=None
+    fileType="text/undefined"
+    filePath=None
+    
+    code=-1
+    
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
-        self.request.sendall("OK")
+	print "~~~"
+	if(self.checkRequestType(self.extractHeader())==True):
+	    self.searchFile(self.extractHeader())
+	
+	self.sendResponse()
+    
+    def sendResponse(self):
+	
+	response=""
+	
+	if(self.code==200):
+	    response="HTTP/1.1 200 OK\r\nContent-Type: "+self.fileType+"\r\n\n"+open(self.filePath).read()
+	    
+	elif(self.code==404):
+	    response="HTTP/1.1 404 Not Found\r\nContent-Type: "+self.fileType+"\r\n"
+	    
+	#print response
+	
+	self.request.sendall(response)
+    
+    def checkRequestType(self,header):
+	if(header.split()[0]=="GET" and header.split()[2]=="HTTP/1.1"):
+	    return True
+	return False
+	
+    def searchFile(self,header):
+	
+	self.filePath="www"+header.split()[1]
+	
+	if(self.filePath[len(self.filePath)-1]=="/" and os.path.isdir(self.filePath[:len(self.filePath)-1])):
+	    self.filePath=self.filePath+"index.html"
+	
+	if(os.path.isfile(self.filePath)):
+	    self.fileName=self.filePath.split("/")[len(self.filePath.split("/"))-1]
+	    if("." in self.fileName):
+		currentFileType=self.fileName.split(".")[1].lower()
+	    
+		if(currentFileType=="css" or currentFileType=="html"):
+		    self.fileType="text/"+currentFileType
+		    self.code=200
+		    return
+	
+	self.code=404
+	
+	 
+    def extractHeader(self):
+	requestList=self.data.split('\r\n')
+	header=requestList[0]
+	return header
+    
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
