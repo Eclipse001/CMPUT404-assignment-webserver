@@ -38,11 +38,17 @@ class MyWebServer(SocketServer.BaseRequestHandler):
     
     def handle(self):
         self.data = self.request.recv(1024).strip()
-	print "~~~"
-	if(self.checkRequestType(self.extractHeader())==True):
-	    self.searchFile(self.extractHeader())
 	
-	self.sendResponse()
+	try:
+	    if(self.checkRequestType(self.extractHeader())==True):
+		self.searchFile(self.extractHeader())
+	    else:
+		self.code=404
+	    
+	    self.sendResponse()
+	
+	except:
+	    print "Bad HTTP request."
     
     def sendResponse(self):
 	
@@ -53,8 +59,6 @@ class MyWebServer(SocketServer.BaseRequestHandler):
 	    
 	elif(self.code==404):
 	    response="HTTP/1.1 404 Not Found\r\nContent-Type: "+self.fileType+"\r\n"
-	    
-	#print response
 	
 	self.request.sendall(response)
     
